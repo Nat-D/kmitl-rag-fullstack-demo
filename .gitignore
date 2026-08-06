@@ -1,0 +1,18 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# node / frontend build
+node_modules/
+frontend/build/
+frontend/.svelte-kit/
+frontend/.vite/
+
+# os
+.DS_Store
