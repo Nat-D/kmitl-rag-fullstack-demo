@@ -99,22 +99,80 @@ change.
 docker compose down -v      # -v also drops the pgdata volume
 ```
 
-### Dev mode (hot reload, optional)
-Run the DB in Docker but the app locally, so edits reload instantly:
-```bash
-docker compose up db                                    # just Postgres
-# terminal 2 — backend (from backend/):
-cd backend && uv sync && DATABASE_URL=postgresql+asyncpg://rag:rag@localhost:5433/ragdb \
-  OPENAI_API_KEY=sk-... uv run alembic upgrade head && \
-  DATABASE_URL=postgresql+asyncpg://rag:rag@localhost:5433/ragdb OPENAI_API_KEY=sk-... \
-  uv run uvicorn app.main:app --reload
-# terminal 3 — frontend (from frontend/):
-cd frontend && npm install && npm run dev               # http://localhost:5173 (proxies /api)
+---
+
+## Part 2 — Local development (recommended while coding)
+
+For day-to-day development you don't want to rebuild a Docker image on every edit.
+The comfortable setup is: **run only Postgres in Docker, run the backend and
+frontend on your machine with hot reload.** Three terminals.
+
 ```
+┌─ terminal 1 ─────────┐   ┌─ terminal 2 ──────────────┐   ┌─ terminal 3 ─────────────┐
+│ Postgres + pgvector  │   │ FastAPI  (uvicorn --reload)│   │ Svelte  (vite dev)        │
+│ docker compose up db │   │ :8000, reloads on save     │   │ :5173, proxies /api → 8000│
+└──────────────────────┘   └────────────────────────────┘   └──────────────────────────┘
+```
+
+**One-time prerequisites:** [`uv`](https://docs.astral.sh/uv/) (Python) and
+Node.js. And a `.env` in the repo root with your key (`cp .env.example .env`) —
+the backend reads it even when run from `backend/`.
+
+### Terminal 1 — the database only
+```bash
+docker compose up db          # just Postgres+pgvector, published on localhost:5433
+```
+Leave it running. (Add `-d` to detach.) Nothing else in Docker.
+
+### Terminal 2 — the backend, with reload
+```bash
+cd backend
+uv sync                       # create the venv + install deps (first time only)
+uv run alembic upgrade head   # create the tables in the Docker DB
+uv run uvicorn app.main:app --reload
+```
+- `--reload` restarts the server on every save.
+- No connection string needed: the default `database_url` in `app/config.py`
+  already points at `localhost:5433` (the port Docker publishes), and your key
+  comes from the root `.env`.
+- The API is at **<http://localhost:8000>** (e.g. `curl localhost:8000/api/health`).
+
+### Terminal 3 — the frontend, with hot reload
+```bash
+cd frontend
+npm install                   # first time only
+npm run dev
+```
+Open **<http://localhost:5173>**. Vite hot-reloads on save and **proxies `/api`**
+to the backend on `:8000` (see `frontend/vite.config.js`), so the two talk to
+each other with no CORS setup.
+
+### The everyday loop
+Edit backend code → uvicorn reloads → refresh. Edit a Svelte page → the browser
+updates instantly. Change a retrieval knob in `app/config.py` (`top_k`,
+`min_score`, `chunk_size`) → uvicorn reloads → re-ingest and see the effect.
+
+### Handy commands
+```bash
+docker compose logs -f db     # watch the database
+docker compose down           # stop the DB (keeps data)
+docker compose down -v        # stop the DB and wipe it (fresh start)
+cd backend && uv run pytest   # run the unit tests (no DB/network needed)
+cd backend && uv run ruff check app   # lint
+```
+
+> **Schema change?** Edit `app/models.py`, then
+> `cd backend && uv run alembic revision --autogenerate -m "what changed"`,
+> review the generated file in `alembic/versions/`, and
+> `uv run alembic upgrade head`.
+
+> **Windows:** run the same commands in PowerShell. Because the backend reads the
+> root `.env`, you don't need to `set`/`export` anything. Docker Desktop must be
+> running for terminal 1.
 
 ---
 
-## Part 2 — Reading guide (which files, in what order)
+## Part 3 — Reading guide (which files, in what order)
 
 The code is meant to be read. Follow this order and you'll trace one document from
 upload to grounded answer. Each file is short and commented.

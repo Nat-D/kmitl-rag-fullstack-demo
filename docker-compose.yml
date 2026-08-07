@@ -35,8 +35,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://rag:rag@db:5432/ragdb
       # The class LLM proxy (OpenAI-compatible). Override with your own if needed.
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://llm.nat-d.uk/v1}
-      # Your personal key from the course portal (Profile -> API key). Required.
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in your .env (see .env.example)}
+      # Your personal key from the course portal (Profile -> API key). Needed for
+      # ingest/ask; left optional here so `docker compose up db` (local dev, backend
+      # run on the host) works without it. The backend returns a clear 502 if it's
+      # missing when you actually call the model.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       CHAT_MODEL: ${CHAT_MODEL:-gemma-4-E4B-it}
       EMBED_MODEL: ${EMBED_MODEL:-bge-m3}
     ports:

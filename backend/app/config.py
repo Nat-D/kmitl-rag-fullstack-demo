@@ -11,7 +11,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Load a .env from the repo root whether the process runs from the root (Docker)
+    # or from backend/ (manual `uvicorn`/`alembic` in local dev), so one root .env
+    # serves both. Real environment variables still take precedence over the file.
+    model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
 
     # Async SQLAlchemy URL (asyncpg driver). Compose sets this to the db service.
     database_url: str = "postgresql+asyncpg://rag:rag@localhost:5433/ragdb"

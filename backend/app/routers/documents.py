@@ -4,6 +4,7 @@ request, call a service, shape the response. No business logic here.
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, UploadFile
+from openai import OpenAIError
 
 from app.chunking import ChunkSpan
 from app.config import settings
@@ -45,6 +46,9 @@ async def ingest(file: UploadFile, svc: IngestServiceDep) -> IngestResult:
         doc, spans = await svc.ingest_file(file.filename or "untitled.txt", raw)
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
+    except OpenAIError as e:
+        # Embedding call failed (e.g. missing/invalid OPENAI_API_KEY) — clean 502.
+        raise HTTPException(502, f"Embedding call failed: {e}") from e
 
     return IngestResult(
         document=DocumentOut(
