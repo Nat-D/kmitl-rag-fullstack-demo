@@ -1,0 +1,15 @@
+# This project's scripts run inside Linux containers, so line endings MUST be LF —
+# even when cloned on Windows. Without this, Git's autocrlf rewrites entrypoint.sh
+# to CRLF on checkout and the container fails with:
+#   "./entrypoint.sh: no such file or directory"  (the \r breaks the #! shebang)
+
+# Default: let Git normalise text, but always check out LF.
+* text=auto eol=lf
+
+# Be explicit about shell scripts — always LF, never CRLF.
+*.sh text eol=lf
+
+# Leave binaries alone.
+*.png binary
+*.jpg binary
+*.ico binary

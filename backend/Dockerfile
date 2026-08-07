@@ -24,7 +24,9 @@ COPY backend/app ./app
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./alembic.ini
 COPY backend/entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
+# Strip any CR (\r) so a Windows CRLF checkout can't break the #! shebang, then
+# make it executable. Belt-and-suspenders with .gitattributes.
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
 
 # Built SPA from stage 1 (served by app.main when STATIC_DIR exists).
 COPY --from=frontend /fe/build ./frontend_build
